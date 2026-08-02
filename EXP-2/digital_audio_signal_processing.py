@@ -1,60 +1,68 @@
-from pydub import AudioSegment
+import wave
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.signal import convolve
 
-# 1. Load Audio File
-audio_path = "/home/saloni/DSIP/EXP-2/music.mp3"  # Replace with your audio file path
-audio = AudioSegment.from_mp3(audio_path).set_channels(1)
-samples = np.array(audio.get_array_of_samples()).astype(np.float32)
+audio_path = "/home/saloni/DSIP/EXP-2/music.wav" 
 
-# Normalize original signal
+with wave.open(audio_path, 'rb') as wav_file:
+    n_channels = wav_file.getnchannels()
+    sample_width = wav_file.getsampwidth()
+    frame_rate = wav_file.getframerate()
+    n_frames = wav_file.getnframes()
+    
+    raw_data = wav_file.readframes(n_frames)
+    
+    samples = np.frombuffer(raw_data, dtype=np.int16).astype(np.float32)
+    
+    if n_channels > 1:
+        samples = samples.reshape(-1, n_channels).mean(axis=1)
+
 samples_norm = samples / np.max(np.abs(samples))
 
-# 2. Define Multiple Impulse Responses (Kernels)
-kernels = {
-    "Comb_Filter": np.array([1, 0, 1, 0, 1], dtype=np.float32),
-    "High_Pass": np.array([1, -1], dtype=np.float32),
-    "Low_Pass": np.ones(5, dtype=np.float32) / 5.0,
-    "Notch_Like": np.array([-0.5, 1, -0.5], dtype=np.float32)
-}
+np.random.seed(42)
 
-# 3. Apply Kernels One by One
-results = {}
+num_kernels = 15
+kernel_length = 10
+kernels = {}
 
-plt.figure(figsize=(12, 2 * (len(kernels) + 1)))
-plt.subplot(len(kernels) + 1, 1, 1)
-plt.plot(samples_norm, color='blue')
+for k in range(1, num_kernels + 1):
+    raw_kernel = np.random.randint(0, 256, size=kernel_length).astype(np.float32)
+    kernel = raw_kernel / np.sum(raw_kernel)
+    kernels[f"Impulse_Response_{k}"] = kernel
+
+
+plt.figure(figsize=(10, 4))
+plt.plot(samples_norm, color='black', alpha=0.8)
 plt.title("Original Audio Signal")
+plt.xlabel("Sample Index")
+plt.ylabel("Amplitude")
+plt.grid(True)
+plt.tight_layout()
+plt.show() 
 
-for i, (name, kernel) in enumerate(kernels.items(), start=2):
-    # Perform convolution
-    convoluted = convolve(samples, kernel, mode='same')
+for name, kernel in kernels.items():
+    # Perform 1D Convolution using NumPy
+    convoluted = np.convolve(samples_norm, kernel, mode='same')
     
-    # Normalize
-    if np.max(np.abs(convoluted)) > 0:
-        convoluted_norm = convoluted / np.max(np.abs(convoluted))
-    else:
-        convoluted_norm = convoluted
-        
-    results[name] = convoluted_norm
+    max_val = np.max(np.abs(convoluted))
+    convoluted_norm = convoluted / max_val if max_val > 0 else convoluted
     
-    # Export as WAV
     convoluted_int16 = (convoluted_norm * 32767).astype(np.int16)
-    out_audio = AudioSegment(
-        convoluted_int16.tobytes(),
-        frame_rate=audio.frame_rate,
-        sample_width=2,
-        channels=1
-    )
     out_file = f"output_{name}.wav"
-    out_audio.export(out_file, format="wav")
+    
+    with wave.open(out_file, 'wb') as out_wav:
+        out_wav.setnchannels(1)
+        out_wav.setsampwidth(2)  
+        out_wav.setframerate(frame_rate)
+        out_wav.writeframes(convoluted_int16.tobytes())
+        
     print(f"Saved: {out_file}")
     
-    # Plot waveform
-    plt.subplot(len(kernels) + 1, 1, i)
-    plt.plot(convoluted_norm)
-    plt.title(f"Filtered: {name}")
-
-plt.tight_layout()
-plt.show()
+    plt.figure(figsize=(10, 4))
+    plt.plot(convoluted_norm, color='blue', linewidth=0.8)
+    plt.title(f"Convolved Signal: {name}")
+    plt.xlabel("Sample Index")
+    plt.ylabel("Amplitude")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()  

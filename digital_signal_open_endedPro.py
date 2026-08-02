@@ -16,42 +16,34 @@ plt.show()
 
 # =================
 
-n = np.arange(0,6)
+n = np.arange(0, 7)
+x = [1, 2, 3, 3, 2, 1, 0]
 
-x = [1,2,3,3,2,1]
-
-plt.stem(n, x)
+plt.step(n, x, where="post")
 
 plt.title("Signal 2")
 plt.xlabel("n")
 plt.ylabel("x[n]")
+plt.ylim(0, 4)  
 plt.grid(True)
 plt.show()
 
 
 # ================
 
+n = [-2, -2, -1, 1, 2, 2]
 
-n = np.arange(-2,3)
+x = [0, -2, -2, 2, 2, 0]
 
-x = []
-
-for i in n:
-    if i <= -1:
-        x.append(-2)
-    elif -1 < i <= 1:
-        x.append(2*i)
-    else:
-        x.append(2)
-
-plt.stem(n, x)
+plt.plot(n, x, color="red", linewidth=2)
 
 plt.title("Signal 3")
 plt.xlabel("n")
 plt.ylabel("x[n]")
 plt.grid(True)
+plt.axhline(0, color="black", linewidth=0.8)  # X-axis line
+plt.axvline(0, color="black", linewidth=0.8)  # Y-axis line
 plt.show()
-
 
 # =========================
 
